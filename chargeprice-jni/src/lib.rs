@@ -1,7 +1,9 @@
+use std::{sync::mpsc, thread};
+
 use chargeprice_ffi::client::FFIClient;
 // This is the interface to the JVM that we'll call the majority of our
 // methods on.
-use jni::JNIEnv;
+use jni::{sys::jobject, JNIEnv};
 
 // These objects are what you should use as arguments to your native
 // function. They carry extra lifetime information to prevent them escaping
@@ -59,4 +61,49 @@ pub extern "system" fn Java_app_chargeprice_api_Client_releaseClient(
     unsafe {
         Box::from_raw(client);
     }
+}
+
+#[no_mangle]
+pub extern "system" fn Java_app_chargeprice_api_Client_loadVehicules(
+    env: JNIEnv,
+    class: JClass,
+    input: jlong,
+    cb: jobject,
+) {
+    // `JNIEnv` cannot be sent across thread boundaries. To be able to use JNI
+    // functions in other threads, we must first obtain the `JavaVM` interface
+    // which, unlike `JNIEnv` is `Send`.
+    let jvm = env.get_java_vm().unwrap();
+
+    // We need to obtain global reference to the `callback` object before sending
+    // it to the thread, to prevent it from being collected by the GC.
+    let callback = env.new_global_ref(cb).unwrap();
+
+    // Use channel to prevent the Java program to finish before the thread
+    // has chance to start.
+    let (tx, rx) = mpsc::channel();
+
+    assert!(input != 0);
+    let client = input as *mut FFIClient;
+    let client = unsafe { client.as_ref().unwrap() };
+
+    client.load_vehicules(|result| {
+        let _ = thread::spawn(move || {
+            // Signal that the thread has started.
+            tx.send(()).unwrap();
+
+            // Use the `JavaVM` interface to attach a `JNIEnv` to the current thread.
+            let env = jvm.attach_current_thread().unwrap();
+
+            match result {
+                Ok(v) => env.call_method(cb, name, sig, args),
+
+                Err(_) => {}
+            }
+            // The current thread is detached automatically when `env` goes out of scope.
+        });
+    });
+
+    // Wait until the thread has started.
+    rx.recv().unwrap();
 }
