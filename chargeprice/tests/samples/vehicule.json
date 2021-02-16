@@ -1,0 +1,23 @@
+{
+    "data": [
+        {
+            "id": "1e49b853-36fc-47ed-9826-97828b5b2fdd",
+            "type": "car",
+            "attributes": {
+                "name": "Kona 64kWh (2018)",
+                "brand": "Hyundai",
+                "dc_charge_ports": [
+                    "ccs"
+                ]
+            },
+            "relationships": {
+                "manufacturer": {
+                    "data": {
+                        "type": "brand",
+                        "id": "3e49b853-36fc-47ed-9826-97828b5b2fd1"
+                    }
+                }
+            }
+        }
+    ]
+}

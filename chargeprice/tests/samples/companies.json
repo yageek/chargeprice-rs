@@ -1,0 +1,39 @@
+{
+    "data": [
+        {
+            "id": "1e49b853-36fc-47ed-9826-97828b5b2fdd",
+            "type": "company",
+            "attributes": {
+                "name": "EnBW",
+                "created_at": 1546297200000,
+                "updated_at": 1546297200000,
+                "version": 1,
+                "url": "http://www.energy.com",
+                "is_cpo": true,
+                "is_emp": true,
+                "external_source_mapping": {
+                    "plugsurfing_ids": null,
+                    "going_electric_names": [
+                        "EnBW"
+                    ],
+                    "going_electric_charge_card_ids": null,
+                    "google_sheet_names": null,
+                    "open_charge_map_operator_ids": null
+                }
+            },
+            "relationships": {
+                "supported_emps": {
+                    "data": [
+                        {
+                            "type": "company",
+                            "id": "2e49b853-36fc-47ed-9826-97828b5b2fdd"
+                        }
+                    ]
+                }
+            }
+        }
+    ],
+    "meta": {
+        "overall_count": 3
+    }
+}

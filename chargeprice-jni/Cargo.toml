@@ -1,0 +1,13 @@
+[package]
+name = "chargeprice-jni"
+version = "0.1.0"
+authors = ["Yannick Heinrich <yannick.heinrich@gmail.com>"]
+edition = "2018"
+
+[lib]
+crate_type = ["cdylib"]
+[dependencies]
+chargeprice-ffi = { path = "../chargeprice-ffi"}
+env_logger = { version = "0.8.2" }
+jni = "0.19.0"
+log = "0.4"

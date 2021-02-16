@@ -1,0 +1,3 @@
+[workspace]
+ members = ["chargeprice", "chargeprice-ffi", "chargeprice-jni"]
+ default-members = ["chargeprice", "chargeprice-ffi"]

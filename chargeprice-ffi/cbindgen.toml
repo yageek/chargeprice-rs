@@ -1,0 +1,8 @@
+
+language = "C"
+[export]
+prefix = "CAPI_"
+
+[parse]
+parse_deps = true
+include = ["chargeprice_rs"]

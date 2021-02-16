@@ -1,0 +1,21 @@
+[package]
+name = "chargeprice-ffi"
+version = "0.1.0"
+authors = ["Yannick Heinrich <yannick.heinrich@gmail.com>"]
+edition = "2018"
+
+[lib]
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[dependencies]
+chargeprice = {path = "../chargeprice"}
+tokio = { version = "1.2.0", features = ["full"] }
+futures = "0.3.8"
+
+env_logger = { version = "0.8.2" }
+
+libc = "0.2"
+lazy_static = "1.4.0"
+log = "0.4"
+[build-dependencies]
+cbindgen = "0.15"
