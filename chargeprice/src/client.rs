@@ -8,6 +8,8 @@ use thiserror::Error;
 const USER_AGENT: &'static str = concat!("chargeprice-rs ", env!("CARGO_PKG_VERSION"));
 const BASE_HOST: &'static str = "https://api.chargeprice.app";
 const API_KEY_HEADER: &'static str = "api-key";
+
+#[derive(Debug)]
 pub struct APIClient {
     client: Client,
 }

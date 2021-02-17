@@ -44,6 +44,7 @@ impl ErrorCode for APIError {
 }
 // FFIClient
 /// An FFI wrapper for the APIClient
+#[derive(Debug)]
 pub struct FFIClient {
     inner: Arc<APIClient>,
     cancellables: Arc<Mutex<HashMap<u64, AbortHandle>>>,

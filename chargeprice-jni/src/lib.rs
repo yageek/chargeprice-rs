@@ -2,10 +2,14 @@
 use android_logger::Config;
 use chargeprice_ffi::client::FFIClient;
 
-use std::{sync::mpsc, thread};
+use std::{ffi::c_void, sync::mpsc, thread};
 // This is the interface to the JVM that we'll call the majority of our
 // methods on.
-use jni::{objects::JValue, sys::jobject, JNIEnv};
+use jni::{
+    objects::{GlobalRef, JValue},
+    sys::{jint, jobject, JNI_VERSION_1_6},
+    JNIEnv, JavaVM,
+};
 
 // These objects are what you should use as arguments to your native
 // function. They carry extra lifetime information to prevent them escaping
@@ -29,8 +33,39 @@ fn native_activity_create() {
     std::env::set_var("HTTP_PROXY", "http://10.0.2.2:3128");
     std::env::set_var("HTTPS_PROXY", "http://10.0.2.2:3128");
 }
-// This keeps Rust from "mangling" the name and making it unique for this
-// crate.
+
+static mut VEHICULE_CLASS: Option<GlobalRef> = None;
+
+#[allow(non_snake_case)]
+#[no_mangle]
+pub extern "system" fn JNI_OnLoad(vm: JavaVM, _: *mut c_void) -> jint {
+    trace!("JNI OnLoad !!!");
+    let env = vm.get_env().expect("Cannot get reference to the JNIEnv");
+
+    // See: https://github.com/exonum/exonum-java-binding/blob/4e00cd8cbae198ac0e8a49cb1405092537f306bc/exonum-java-binding/core/rust/src/utils/jni_cache.rs
+
+    #[cfg(target_os = "android")]
+    native_activity_create();
+
+    init_cache(&env);
+    JNI_VERSION_1_6
+}
+
+fn init_cache(env: &JNIEnv) {
+    unsafe {
+        VEHICULE_CLASS = get_class(&env, "app/chargeprice/api/Vehicule");
+    }
+}
+
+/// Returns cached class reference.
+///
+/// Always returns Some(class_ref), panics if class not found.
+fn get_class(env: &JNIEnv, class: &str) -> Option<GlobalRef> {
+    let class = env
+        .find_class(class)
+        .unwrap_or_else(|_| panic!("Class {} not found", class));
+    Some(env.new_global_ref(class).unwrap())
+}
 #[no_mangle]
 pub extern "system" fn Java_app_chargeprice_api_Client_createNewClient(
     env: JNIEnv,
@@ -40,9 +75,6 @@ pub extern "system" fn Java_app_chargeprice_api_Client_createNewClient(
     _class: JClass,
     input: JString,
 ) -> jlong {
-    #[cfg(target_os = "android")]
-    native_activity_create();
-
     let key: String = env
         .get_string(input)
         .expect("couldnt't get the serial key")
@@ -106,13 +138,16 @@ pub extern "system" fn Java_app_chargeprice_api_Client_loadVehicules(
     let _ = thread::spawn(move || {
         tx.send(()).unwrap();
 
+        let (itx, irx) = mpsc::channel();
         trace!("[CLIENT] Loading... request !");
+
         client.load_vehicules(move |result| {
             // Use the `JavaVM` interface to attach a `JNIEnv` to the current thread.
             let env = jvm.attach_current_thread().unwrap();
 
             match result {
                 Ok(v) => {
+                    trace!("Conversion starting...");
                     // We instantiate an ArrayList
                     let array_list_class = env
                         .find_class("java/util/ArrayList")
@@ -122,13 +157,8 @@ pub extern "system" fn Java_app_chargeprice_api_Client_loadVehicules(
                         .new_object(array_list_class, "()V", &[])
                         .expect("error during array init");
 
-                    // We allocate an arrayList first
-                    // Now we need to convert each rust object into JNI
-                    let vehicule_class = env
-                        .find_class("app/chargeprice/api/Vehicule")
-                        .expect("Vehicule class found");
-
                     for r in v.data().iter() {
+                        trace!("Loop...");
                         // We convert elements to java
                         let identifier = env.new_string(r.id()).expect("valid string");
                         let brand = env.new_string(r.attributes().brand()).expect("valid brand");
@@ -136,11 +166,13 @@ pub extern "system" fn Java_app_chargeprice_api_Client_loadVehicules(
                             .new_string(r.relationships().unwrap().manufacturer_id())
                             .expect("valid brand");
 
+                        let class = unsafe { VEHICULE_CLASS.clone().unwrap() };
                         // We create one element
+                        trace!("Constructor...");
                         let new_vehicule = env
                             .new_object(
-                                vehicule_class,
-                                "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V",
+                                class.as_obj(),
+                                "Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;",
                                 &[
                                     JValue::Object(identifier.into()),
                                     JValue::Object(brand.into()),
@@ -149,18 +181,20 @@ pub extern "system" fn Java_app_chargeprice_api_Client_loadVehicules(
                             )
                             .expect("impossible to create a vehicule");
 
+                        trace!("Adding elements...");
                         let _ = env
                             .call_method(array_list, "add", "()Z", &[JValue::Object(new_vehicule)])
                             .expect("adding should be success");
-
-                        env.call_method(
-                            &callback,
-                            "onVehiculeSuccess",
-                            "(Ljava/util/ArrayList;)V",
-                            &[JValue::Object(array_list)],
-                        )
-                        .expect("valid callback");
                     }
+
+                    trace!("Call callback...");
+                    env.call_method(
+                        &callback,
+                        "onVehiculeSuccess",
+                        "(Ljava/util/ArrayList;)V",
+                        &[JValue::Object(array_list)],
+                    )
+                    .expect("valid callback");
                 }
 
                 Err(e) => {
@@ -177,7 +211,10 @@ pub extern "system" fn Java_app_chargeprice_api_Client_loadVehicules(
                 }
             }
             trace!("[END] Loading vehicules...");
+            itx.send(()).unwrap();
         });
+
+        irx.recv().unwrap();
     });
 
     // Wait until the thread has started.
