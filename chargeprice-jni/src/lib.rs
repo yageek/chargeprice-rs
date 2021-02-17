@@ -26,8 +26,8 @@ fn native_activity_create() {
             .with_tag("chargeprice-jni-android"), // logs will show under mytag tag
     );
 
-    // std::env::set_var("HTTP_PROXY", "http://127.0.0.1:3128");
-    // std::env::set_var("HTTPS_PROXY", "http://127.0.0.1:3128");
+    std::env::set_var("HTTP_PROXY", "http://10.0.2.2:3128");
+    std::env::set_var("HTTPS_PROXY", "http://10.0.2.2:3128");
 }
 // This keeps Rust from "mangling" the name and making it unique for this
 // crate.
@@ -86,7 +86,6 @@ pub extern "system" fn Java_app_chargeprice_api_Client_loadVehicules(
     cb: jobject,
 ) {
     assert!(input != 0);
-    trace!("[START] Loading vehicules...");
     // `JNIEnv` cannot be sent across thread boundaries. To be able to use JNI
     // functions in other threads, we must first obtain the `JavaVM` interface
     // which, unlike `JNIEnv` is `Send`.
@@ -104,13 +103,11 @@ pub extern "system" fn Java_app_chargeprice_api_Client_loadVehicules(
     let client = unsafe { client.as_ref().unwrap() };
 
     trace!("Calling Web service...");
-    client.load_vehicules(|result| {
-        trace!("Calling Web service - Starting THREAD");
-        let _ = thread::spawn(move || {
-            // Signal that the thread has started.
-            tx.send(()).unwrap();
+    let _ = thread::spawn(move || {
+        tx.send(()).unwrap();
 
-            trace!("Calling Web service - Begin conversion");
+        trace!("[CLIENT] Loading... request !");
+        client.load_vehicules(move |result| {
             // Use the `JavaVM` interface to attach a `JNIEnv` to the current thread.
             let env = jvm.attach_current_thread().unwrap();
 
@@ -179,8 +176,6 @@ pub extern "system" fn Java_app_chargeprice_api_Client_loadVehicules(
                     .expect("valid call");
                 }
             }
-
-            // The current thread is detached automatically when `env` goes out of scope.
             trace!("[END] Loading vehicules...");
         });
     });
