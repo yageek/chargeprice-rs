@@ -5,7 +5,6 @@
 # export ANDROID_NDK_HOME=${ANDROID_HOME}/ndk/21.1.6352462/
 # export PATH=${ANDROID_NDK_HOME}/toolchains/llvm/prebuilt/darwin-x86_64/bin:${ANDROID_NDK_HOME}/toolchains/arm-linux-androideabi-4.9/prebuilt/darwin-x86_64/bin/:${PATH}
 
-set -x
 export OPENSSL_BUILD_ROOT=${HOME}/Desktop/openssl_build
 export OPENSSL_STATIC="1" # See: https://github.com/sfackler/rust-openssl/issues/383
 export VERSION=""

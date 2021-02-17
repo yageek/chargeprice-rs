@@ -1,12 +1,15 @@
 package app.chargeprice.api;
+
 public class Vehicule {
 
     private String identifier;
     private String brand;
+    private String manufacturerIdentifier;
 
-    public Vehicule(String identifier, String brand) {
+    public Vehicule(String identifier, String brand, String manufacturerIdentifier) {
         this.identifier = identifier;
         this.brand = brand;
+        this.manufacturerIdentifier = manufacturerIdentifier;
     }
 
     public String getIdentifier() {
@@ -15,5 +18,9 @@ public class Vehicule {
 
     public String getBrand() {
         return brand;
+    }
+    
+    public String getManufacturerIdentifier() {
+        return manufacturerIdentifier;
     }
 }

@@ -1,5 +1,8 @@
 package app.chargeprice.api;
 
-public interface ClientListener<T> {
-    void onSuccess(T value);
+import java.util.List;
+
+public interface ClientListener {
+    void onVehiculeSuccess(List<Vehicule> values);
+    void onVehiculeError(String reason);
 }

@@ -3,7 +3,10 @@ package app.chargeprice.api;
 import androidx.appcompat.app.AppCompatActivity;
 
 import android.os.Bundle;
+import android.util.Log;
 import android.widget.TextView;
+
+import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -15,7 +18,19 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         try {
-            mClient = new Client("some_keu");
+            mClient = new Client("***REMOVED***");
+
+            mClient.loadVehicule(new ClientListener() {
+                @Override
+                public void onVehiculeSuccess(List<Vehicule> values) {
+                    Log.d("JavaClient", "Element:" + values);
+                }
+
+                @Override
+                public void onVehiculeError(String reason) {
+                    Log.e("JavaClient", reason);
+                }
+            });
         } catch (Throwable throwable) {
             throwable.printStackTrace();
         }
