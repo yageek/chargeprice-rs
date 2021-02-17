@@ -4,6 +4,7 @@ use chargeprice_ffi::client::FFIClient;
 // This is the interface to the JVM that we'll call the majority of our
 // methods on.
 use jni::{
+    objects::JValue,
     sys::{jobject, jvalue},
     JNIEnv,
 };
@@ -105,7 +106,8 @@ pub extern "system" fn Java_app_chargeprice_api_Client_loadVehicules(
                     let vehicule_class = env
                         .find_class("app/chargeprice/api/Vehicule")
                         .expect("Vehicule class found");
-                    let jni_obj = v.data().into_iter().map(|r| {
+                        
+                    let jni_obj: Vec<_> = v.data().into_iter().map(|r| {
 
                         let identifier = env.new_string(r.id()).expect("valid string");
                         let brand = env.new_string(r.attributes().brand()).expect("valid brand");
@@ -114,9 +116,10 @@ pub extern "system" fn Java_app_chargeprice_api_Client_loadVehicules(
                             vehicule_class,
                             "<init>",
                             "(Ljava/lang/String;Ljava/lang/String;)Lapp/chargeprice/client/Vehicule;",
-                            &[identifier.into_inner(), brand],
-                        );
-                    });
+                            &[JValue::Object(identifier.into()), JValue::Object(brand.into())],
+                        ).expect("valid elements");  
+                    }).collect();
+
                     let _ = env.call_method(
                         cb,
                         "onSuccess",

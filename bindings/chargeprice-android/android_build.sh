@@ -12,7 +12,7 @@ export VERSION=""
 cd ../../
 
 # Arm 64
-export OPENSSL_DIR=${OPENSSL_BUILD_ROOT}/android-arm64
+export OPENSSL_DIR=${OPENSSL_BUILD_ROOT}/arm64
 cargo build --lib -p chargeprice-jni --target aarch64-linux-android ${VERSION}
 cp ./target/aarch64-linux-android/debug/libchargeprice_jni.so ./bindings/libchargeprice_jni/android/jniLibs/arm64/libchargeprice_jni.so
 
