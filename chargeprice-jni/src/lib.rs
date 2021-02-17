@@ -3,7 +3,10 @@ use std::{sync::mpsc, thread};
 use chargeprice_ffi::client::FFIClient;
 // This is the interface to the JVM that we'll call the majority of our
 // methods on.
-use jni::{sys::jobject, JNIEnv};
+use jni::{
+    sys::{jobject, jvalue},
+    JNIEnv,
+};
 
 // These objects are what you should use as arguments to your native
 // function. They carry extra lifetime information to prevent them escaping
@@ -70,6 +73,8 @@ pub extern "system" fn Java_app_chargeprice_api_Client_loadVehicules(
     input: jlong,
     cb: jobject,
 ) {
+    assert!(input != 0);
+
     // `JNIEnv` cannot be sent across thread boundaries. To be able to use JNI
     // functions in other threads, we must first obtain the `JavaVM` interface
     // which, unlike `JNIEnv` is `Send`.
@@ -83,7 +88,6 @@ pub extern "system" fn Java_app_chargeprice_api_Client_loadVehicules(
     // has chance to start.
     let (tx, rx) = mpsc::channel();
 
-    assert!(input != 0);
     let client = input as *mut FFIClient;
     let client = unsafe { client.as_ref().unwrap() };
 
@@ -96,7 +100,30 @@ pub extern "system" fn Java_app_chargeprice_api_Client_loadVehicules(
             let env = jvm.attach_current_thread().unwrap();
 
             match result {
-                Ok(v) => env.call_method(cb, name, sig, args),
+                Ok(v) => {
+                    // Now we need to convert each rust object into JNI
+                    let vehicule_class = env
+                        .find_class("app/chargeprice/api/Vehicule")
+                        .expect("Vehicule class found");
+                    let jni_obj = v.data().into_iter().map(|r| {
+
+                        let identifier = env.new_string(r.id()).expect("valid string");
+                        let brand = env.new_string(r.attributes().brand()).expect("valid brand");
+
+                        let new = env.call_method(
+                            vehicule_class,
+                            "<init>",
+                            "(Ljava/lang/String;Ljava/lang/String;)Lapp/chargeprice/client/Vehicule;",
+                            &[identifier.into_inner(), brand],
+                        );
+                    });
+                    let _ = env.call_method(
+                        cb,
+                        "onSuccess",
+                        "(Lapp/chargeprice/api/ClientListener;)V",
+                        &[],
+                    );
+                }
 
                 Err(_) => {}
             }
