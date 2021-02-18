@@ -182,12 +182,17 @@ pub extern "system" fn Java_app_chargeprice_api_Client_loadVehicules(
                         .new_string(r.relationships().unwrap().manufacturer_id())
                         .expect("valid brand");
 
-                    panic!("coucou !");
                     // We create one element
                     trace!("Constructor...");
-                    let new_vehicule = env
-                        .call_method(&vehicule_class, "<init>", "()V", &[])
-                        .expect("new element");
+                    let new_vehicule = match env.call_method(&vehicule_class, "<init>", "()V", &[])
+                    {
+                        Ok(v) => v,
+                        Err(e) => {
+                            error!("Error new vehicule: {}", e);
+                            panic!("ooups !");
+                        }
+                    };
+
                     // let new_vehicule = env
                     //     .new_object(
                     //         &vehicule_class,
@@ -201,9 +206,18 @@ pub extern "system" fn Java_app_chargeprice_api_Client_loadVehicules(
                     //     .expect("valid constructor");
 
                     trace!("Adding elements...");
-                    let _ = env
-                        .call_method(array_list, "add", "()Z", &[new_vehicule])
-                        .expect("adding should be success");
+                    let _ = match env.call_method(
+                        array_list,
+                        "add",
+                        "(Ljava/lang/Object;)Z",
+                        &[new_vehicule],
+                    ) {
+                        Ok(v) => v,
+                        Err(e) => {
+                            error!("Error add: {}", e);
+                            panic!("ooups !");
+                        }
+                    };
                 }
 
                 trace!("Call callback...");
