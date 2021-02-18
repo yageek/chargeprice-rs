@@ -6,6 +6,7 @@ import android.os.Bundle;
 import android.util.Log;
 import android.widget.TextView;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
@@ -22,7 +23,7 @@ public class MainActivity extends AppCompatActivity {
 
             mClient.loadVehicule(new ClientListener() {
                 @Override
-                public void onVehiculeSuccess(List<Vehicule> values) {
+                public void onVehiculeSuccess(ArrayList<Vehicule> values) {
                     Log.d("JavaClient", "Element:" + values);
                 }
 

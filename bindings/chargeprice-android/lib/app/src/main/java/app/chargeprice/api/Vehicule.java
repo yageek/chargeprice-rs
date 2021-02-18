@@ -6,6 +6,12 @@ public class Vehicule {
     private String brand;
     private String manufacturerIdentifier;
 
+    public Vehicule() {
+        identifier = "";
+        brand = "";
+        manufacturerIdentifier = "";
+    }
+
     public Vehicule(String identifier, String brand, String manufacturerIdentifier) {
         this.identifier = identifier;
         this.brand = brand;

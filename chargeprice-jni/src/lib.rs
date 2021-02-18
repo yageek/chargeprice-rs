@@ -2,11 +2,11 @@
 use android_logger::Config;
 use chargeprice_ffi::client::FFIClient;
 
-use std::{ffi::c_void, sync::mpsc, thread};
+use std::ffi::c_void;
 // This is the interface to the JVM that we'll call the majority of our
 // methods on.
 use jni::{
-    objects::{GlobalRef, JValue},
+    objects::{GlobalRef, JMethodID, JValue},
     sys::{jint, jobject, JNI_VERSION_1_6},
     JNIEnv, JavaVM,
 };
@@ -30,11 +30,12 @@ fn native_activity_create() {
             .with_tag("chargeprice-jni-android"), // logs will show under mytag tag
     );
 
-    std::env::set_var("HTTP_PROXY", "http://10.0.2.2:3128");
-    std::env::set_var("HTTPS_PROXY", "http://10.0.2.2:3128");
+    // std::env::set_var("HTTP_PROXY", "http://10.0.2.2:3128");
+    // std::env::set_var("HTTPS_PROXY", "http://10.0.2.2:3128");
 }
 
 static mut VEHICULE_CLASS: Option<GlobalRef> = None;
+static mut VEHICULE_CONSTRUCTOR: Option<JMethodID> = None;
 
 #[allow(non_snake_case)]
 #[no_mangle]
@@ -54,9 +55,31 @@ pub extern "system" fn JNI_OnLoad(vm: JavaVM, _: *mut c_void) -> jint {
 fn init_cache(env: &JNIEnv) {
     unsafe {
         VEHICULE_CLASS = get_class(&env, "app/chargeprice/api/Vehicule");
+        VEHICULE_CONSTRUCTOR = get_method_id(
+            &env,
+            "app/chargeprice/api/Vehicule",
+            "<init>",
+            "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V",
+        );
     }
 }
 
+/// Produces `JMethodID` for a particular method dealing with its lifetime.
+///
+/// Always returns `Some(method_id)`, panics if method not found.
+fn get_method_id(env: &JNIEnv, class: &str, name: &str, sig: &str) -> Option<JMethodID<'static>> {
+    let method_id = env
+        .get_method_id(class, name, sig)
+        // we need this line to erase lifetime in order to save underlying raw pointer in static
+        .map(|mid| mid.into_inner().into())
+        .unwrap_or_else(|_| {
+            panic!(
+                "Method {} with signature {} of class {} not found",
+                name, sig, class
+            )
+        });
+    Some(method_id)
+}
 /// Returns cached class reference.
 ///
 /// Always returns Some(class_ref), panics if class not found.
@@ -127,96 +150,85 @@ pub extern "system" fn Java_app_chargeprice_api_Client_loadVehicules(
     // it to the thread, to prevent it from being collected by the GC.
     let callback = env.new_global_ref(cb).unwrap();
 
-    // Use channel to prevent the Java program to finish before the thread
-    // has chance to start.
-    let (tx, rx) = mpsc::channel();
-
     let client = input as *mut FFIClient;
     let client = unsafe { client.as_ref().unwrap() };
 
     trace!("Calling Web service...");
-    let _ = thread::spawn(move || {
-        tx.send(()).unwrap();
 
-        let (itx, irx) = mpsc::channel();
-        trace!("[CLIENT] Loading... request !");
+    client.load_vehicules(move |result| {
+        // Use the `JavaVM` interface to attach a `JNIEnv` to the current thread.
+        let env = jvm.attach_current_thread().unwrap();
 
-        client.load_vehicules(move |result| {
-            // Use the `JavaVM` interface to attach a `JNIEnv` to the current thread.
-            let env = jvm.attach_current_thread().unwrap();
+        match result {
+            Ok(v) => {
+                trace!("Conversion starting...");
+                // We instantiate an ArrayList
+                let array_list_class = env
+                    .find_class("java/util/ArrayList")
+                    .expect("expect Array list");
 
-            match result {
-                Ok(v) => {
-                    trace!("Conversion starting...");
-                    // We instantiate an ArrayList
-                    let array_list_class = env
-                        .find_class("java/util/ArrayList")
-                        .expect("expect Array list");
+                let array_list = env
+                    .new_object(array_list_class, "()V", &[])
+                    .expect("error during array init");
 
-                    let array_list = env
-                        .new_object(array_list_class, "()V", &[])
-                        .expect("error during array init");
+                let vehicule_class = unsafe { VEHICULE_CLASS.clone().unwrap() };
 
-                    for r in v.data().iter() {
-                        trace!("Loop...");
-                        // We convert elements to java
-                        let identifier = env.new_string(r.id()).expect("valid string");
-                        let brand = env.new_string(r.attributes().brand()).expect("valid brand");
-                        let man = env
-                            .new_string(r.relationships().unwrap().manufacturer_id())
-                            .expect("valid brand");
+                for r in v.data().iter() {
+                    trace!("Loop...");
+                    // We convert elements to java
+                    let identifier = env.new_string(r.id()).expect("valid string");
+                    let brand = env.new_string(r.attributes().brand()).expect("valid brand");
+                    let man = env
+                        .new_string(r.relationships().unwrap().manufacturer_id())
+                        .expect("valid brand");
 
-                        let class = unsafe { VEHICULE_CLASS.clone().unwrap() };
-                        // We create one element
-                        trace!("Constructor...");
-                        let new_vehicule = env
-                            .new_object(
-                                class.as_obj(),
-                                "Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;",
-                                &[
-                                    JValue::Object(identifier.into()),
-                                    JValue::Object(brand.into()),
-                                    JValue::Object(man.into()),
-                                ],
-                            )
-                            .expect("impossible to create a vehicule");
+                    panic!("coucou !");
+                    // We create one element
+                    trace!("Constructor...");
+                    let new_vehicule = env
+                        .call_method(&vehicule_class, "<init>", "()V", &[])
+                        .expect("new element");
+                    // let new_vehicule = env
+                    //     .new_object(
+                    //         &vehicule_class,
+                    //         "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V",
+                    //         &[
+                    //             JValue::Object(identifier.into()),
+                    //             JValue::Object(brand.into()),
+                    //             JValue::Object(man.into()),
+                    //         ],
+                    //     )
+                    //     .expect("valid constructor");
 
-                        trace!("Adding elements...");
-                        let _ = env
-                            .call_method(array_list, "add", "()Z", &[JValue::Object(new_vehicule)])
-                            .expect("adding should be success");
-                    }
-
-                    trace!("Call callback...");
-                    env.call_method(
-                        &callback,
-                        "onVehiculeSuccess",
-                        "(Ljava/util/ArrayList;)V",
-                        &[JValue::Object(array_list)],
-                    )
-                    .expect("valid callback");
+                    trace!("Adding elements...");
+                    let _ = env
+                        .call_method(array_list, "add", "()Z", &[new_vehicule])
+                        .expect("adding should be success");
                 }
 
-                Err(e) => {
-                    error!("An errors occurs during fetching the elements: {:?}", e);
-
-                    let message = env.new_string(format!("{:?}", e)).expect("valid string");
-                    env.call_method(
-                        &callback,
-                        "onVehiculeError",
-                        "(Ljava/lang/String;)V",
-                        &[JValue::Object(message.into())],
-                    )
-                    .expect("valid call");
-                }
+                trace!("Call callback...");
+                env.call_method(
+                    &callback,
+                    "onVehiculeSuccess",
+                    "(Ljava/util/ArrayList;)V",
+                    &[JValue::Object(array_list)],
+                )
+                .expect("valid callback");
             }
-            trace!("[END] Loading vehicules...");
-            itx.send(()).unwrap();
-        });
 
-        irx.recv().unwrap();
+            Err(e) => {
+                error!("An errors occurs during fetching the elements: {:?}", e);
+
+                let message = env.new_string(format!("{:?}", e)).expect("valid string");
+                env.call_method(
+                    &callback,
+                    "onVehiculeError",
+                    "(Ljava/lang/String;)V",
+                    &[JValue::Object(message.into())],
+                )
+                .expect("valid call");
+            }
+        }
+        trace!("[END] Loading vehicules...");
     });
-
-    // Wait until the thread has started.
-    rx.recv().unwrap();
 }
