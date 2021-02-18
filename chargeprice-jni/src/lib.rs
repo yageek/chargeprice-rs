@@ -172,7 +172,7 @@ pub extern "system" fn Java_app_chargeprice_api_Client_loadVehicules(
                     .expect("error during array init");
 
                 let vehicule_class = unsafe { VEHICULE_CLASS.clone().unwrap() };
-
+                let vehicule_add = unsafe { VEHICULE_CONSTRUCTOR.clone().unwrap() };
                 for r in v.data().iter() {
                     trace!("Loop...");
                     // We convert elements to java
@@ -184,40 +184,28 @@ pub extern "system" fn Java_app_chargeprice_api_Client_loadVehicules(
 
                     // We create one element
                     trace!("Constructor...");
-                    let new_vehicule = match env.call_method(&vehicule_class, "<init>", "()V", &[])
-                    {
-                        Ok(v) => v,
-                        Err(e) => {
-                            error!("Error new vehicule: {}", e);
-                            panic!("ooups !");
-                        }
-                    };
 
-                    // let new_vehicule = env
-                    //     .new_object(
-                    //         &vehicule_class,
-                    //         "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V",
-                    //         &[
-                    //             JValue::Object(identifier.into()),
-                    //             JValue::Object(brand.into()),
-                    //             JValue::Object(man.into()),
-                    //         ],
-                    //     )
-                    //     .expect("valid constructor");
+                    let new_vehicule = env
+                        .new_object_unchecked(
+                            &vehicule_class,
+                            vehicule_add,
+                            &[
+                                JValue::Object(identifier.into()),
+                                JValue::Object(brand.into()),
+                                JValue::Object(man.into()),
+                            ],
+                        )
+                        .expect("valid element");
 
                     trace!("Adding elements...");
-                    let _ = match env.call_method(
-                        array_list,
-                        "add",
-                        "(Ljava/lang/Object;)Z",
-                        &[new_vehicule],
-                    ) {
-                        Ok(v) => v,
-                        Err(e) => {
-                            error!("Error add: {}", e);
-                            panic!("ooups !");
-                        }
-                    };
+                    let _ = env
+                        .call_method(
+                            array_list,
+                            "add",
+                            "(Ljava/lang/Object;)Z",
+                            &[JValue::Object(new_vehicule)],
+                        )
+                        .expect("correct initialisation");
                 }
 
                 trace!("Call callback...");
