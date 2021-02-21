@@ -1,4 +1,4 @@
-use chargeprice::api::{VehiculeChargePort, VehiculeResponse};
+use chargeprice::api::{ChargingStationResponse, VehiculeChargePort, VehiculeResponse};
 
 #[test]
 fn vehicule_deserialize() {
@@ -15,4 +15,12 @@ fn vehicule_deserialize() {
         Some("3e49b853-36fc-47ed-9826-97828b5b2fd1"),
         vehicule.relationships().map(|d| d.manufacturer_id())
     );
+}
+
+#[test]
+fn charging_station_serialize() {
+    let input_data = include_str!("samples/charging_station.json");
+
+    let _: ChargingStationResponse =
+        serde_json::from_str(input_data).expect("valid deseiralization");
 }

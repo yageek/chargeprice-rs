@@ -2,14 +2,11 @@
 use android_logger::Config;
 use chargeprice_ffi::client::FFIClient;
 
-use std::ffi::c_void;
+mod jni_cache;
+
 // This is the interface to the JVM that we'll call the majority of our
 // methods on.
-use jni::{
-    objects::{GlobalRef, JMethodID, JValue},
-    sys::{jint, jobject, JNI_VERSION_1_6},
-    JNIEnv, JavaVM,
-};
+use jni::{objects::JValue, sys::jobject, JNIEnv};
 
 // These objects are what you should use as arguments to your native
 // function. They carry extra lifetime information to prevent them escaping
@@ -20,7 +17,12 @@ use jni::objects::{JClass, JString};
 // can't return one of the objects with lifetime information because the
 // lifetime checker won't let us.
 use jni::sys::jlong;
-use log::{error, trace, Level};
+use log::{error, trace};
+
+#[cfg(target_os = "android")]
+use log::Level;
+
+use jni_cache::runtime_adapter;
 
 #[cfg(target_os = "android")]
 fn native_activity_create() {
@@ -34,61 +36,6 @@ fn native_activity_create() {
     // std::env::set_var("HTTPS_PROXY", "http://10.0.2.2:3128");
 }
 
-static mut VEHICULE_CLASS: Option<GlobalRef> = None;
-static mut VEHICULE_CONSTRUCTOR: Option<JMethodID> = None;
-
-#[allow(non_snake_case)]
-#[no_mangle]
-pub extern "system" fn JNI_OnLoad(vm: JavaVM, _: *mut c_void) -> jint {
-    trace!("JNI OnLoad !!!");
-    let env = vm.get_env().expect("Cannot get reference to the JNIEnv");
-
-    // See: https://github.com/exonum/exonum-java-binding/blob/4e00cd8cbae198ac0e8a49cb1405092537f306bc/exonum-java-binding/core/rust/src/utils/jni_cache.rs
-
-    #[cfg(target_os = "android")]
-    native_activity_create();
-
-    init_cache(&env);
-    JNI_VERSION_1_6
-}
-
-fn init_cache(env: &JNIEnv) {
-    unsafe {
-        VEHICULE_CLASS = get_class(&env, "app/chargeprice/api/Vehicule");
-        VEHICULE_CONSTRUCTOR = get_method_id(
-            &env,
-            "app/chargeprice/api/Vehicule",
-            "<init>",
-            "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V",
-        );
-    }
-}
-
-/// Produces `JMethodID` for a particular method dealing with its lifetime.
-///
-/// Always returns `Some(method_id)`, panics if method not found.
-fn get_method_id(env: &JNIEnv, class: &str, name: &str, sig: &str) -> Option<JMethodID<'static>> {
-    let method_id = env
-        .get_method_id(class, name, sig)
-        // we need this line to erase lifetime in order to save underlying raw pointer in static
-        .map(|mid| mid.into_inner().into())
-        .unwrap_or_else(|_| {
-            panic!(
-                "Method {} with signature {} of class {} not found",
-                name, sig, class
-            )
-        });
-    Some(method_id)
-}
-/// Returns cached class reference.
-///
-/// Always returns Some(class_ref), panics if class not found.
-fn get_class(env: &JNIEnv, class: &str) -> Option<GlobalRef> {
-    let class = env
-        .find_class(class)
-        .unwrap_or_else(|_| panic!("Class {} not found", class));
-    Some(env.new_global_ref(class).unwrap())
-}
 #[no_mangle]
 pub extern "system" fn Java_app_chargeprice_api_Client_createNewClient(
     env: JNIEnv,
@@ -171,8 +118,6 @@ pub extern "system" fn Java_app_chargeprice_api_Client_loadVehicules(
                     .new_object(array_list_class, "()V", &[])
                     .expect("error during array init");
 
-                let vehicule_class = unsafe { VEHICULE_CLASS.clone().unwrap() };
-                let vehicule_add = unsafe { VEHICULE_CONSTRUCTOR.clone().unwrap() };
                 for r in v.data().iter() {
                     trace!("Loop...");
                     // We convert elements to java
@@ -187,8 +132,8 @@ pub extern "system" fn Java_app_chargeprice_api_Client_loadVehicules(
 
                     let new_vehicule = env
                         .new_object_unchecked(
-                            &vehicule_class,
-                            vehicule_add,
+                            &runtime_adapter::vehicule_class(),
+                            runtime_adapter::vehicule_init(),
                             &[
                                 JValue::Object(identifier.into()),
                                 JValue::Object(brand.into()),

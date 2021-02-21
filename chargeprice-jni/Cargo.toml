@@ -11,6 +11,7 @@ chargeprice-ffi = { path = "../chargeprice-ffi"}
 env_logger = { version = "0.8.2" }
 jni = "0.19"
 log = "0.4"
+parking_lot = "0.11"
 
 [target.'cfg(target_os = "android")'.dependencies]
 android_logger = "0.9"
