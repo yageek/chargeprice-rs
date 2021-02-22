@@ -1,4 +1,4 @@
-use chargeprice::api::{ChargingStationResponse, VehiculeChargePort, VehiculeResponse};
+use chargeprice::api::{ChargingStationResponse, Plug, VehiculeResponse};
 
 #[test]
 fn vehicule_deserialize() {
@@ -21,6 +21,31 @@ fn vehicule_deserialize() {
 fn charging_station_serialize() {
     let input_data = include_str!("samples/charging_station.json");
 
-    let _: ChargingStationResponse =
+    let response: ChargingStationResponse =
         serde_json::from_str(input_data).expect("valid deseiralization");
+    let station = &response.data()[0];
+    assert_eq!("Spar", station.attributes().name());
+    assert_eq!(10.0, station.attributes().latitude());
+    assert_eq!(20.0, station.attributes().longitude());
+    assert_eq!("AT", station.attributes().country());
+    assert_eq!(
+        "Stangersdorf-Gewerbegebiet 110 A, 8403 Lebring",
+        station.attributes().address()
+    );
+    assert_eq!(Some(true), station.attributes().free_parking());
+    assert_eq!(Some(false), station.attributes().free_charging());
+
+    // Point
+    let points = station.attributes().charge_points();
+    assert!(!points.is_empty());
+    let pt = &points[0];
+    assert_eq!(Plug::CCS, pt.plug());
+    assert_eq!(50.0, pt.power());
+    assert_eq!(2, pt.count());
+    assert_eq!(2, pt.available_count());
+
+    assert_eq!(
+        "ae62cd2d-f29d-4107-b087-6d4f75261cca",
+        station.relationships().unwrap().operator_id()
+    );
 }

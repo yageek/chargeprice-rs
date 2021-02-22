@@ -1,24 +1,16 @@
 use serde::Deserialize;
 
-use super::common::{EntityRef, InnerData, Response};
-#[derive(Debug, Deserialize, Clone, Copy, PartialEq, Eq)]
-pub enum VehiculeChargePort {
-    #[serde(rename(deserialize = "ccs"))]
-    CCS,
-    #[serde(rename(deserialize = "tesla_ccs"))]
-    TeslaCCS,
-    #[serde(rename(deserialize = "chademo"))]
-    CHADemo,
-    #[serde(rename(deserialize = "tesla_suc"))]
-    TeslaSUC,
-}
+use super::{
+    common::{EntityRef, InnerData, Response},
+    plug::Plug,
+};
 
 /// The attributes of the vehicules (cf: https://github.com/chargeprice/chargeprice-api-docs/blob/master/api/v1/vehicles/index.md)
 #[derive(Debug, Deserialize)]
 pub struct VehiculeAttributes {
     name: String,
     brand: String,
-    dc_charge_ports: Vec<VehiculeChargePort>,
+    dc_charge_ports: Vec<Plug>,
 }
 
 impl VehiculeAttributes {
