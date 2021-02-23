@@ -119,3 +119,16 @@ pub type ChargingStationResponse = Response<
     Vec<ChargingStationIncludeItem>,
     ChargingStationMeta,
 >;
+#[derive(Debug, Deserialize)]
+pub struct Bounds {
+    gte: f32,
+    lte: f32,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct ChargingStationRequest {
+    latitude: Bounds,
+    longitude: Bounds,
+    free_charging: Option<bool>,
+    free_parking: Option<bool>,
+}

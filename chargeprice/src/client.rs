@@ -81,13 +81,14 @@ impl APIClient {
         }
     }
 
-    pub async fn load_vehicules(&self) -> Result<VehiculeResponse, APIError> {
-        self.execute_request(APIClient::get_vehicules_request())
-            .await
-    }
-
     fn get_vehicules_request() -> Request {
         let url = Url::parse(&format!("{}/v1/vehicles", BASE_HOST)).unwrap();
         Request::new(Method::GET, url)
+    }
+
+    /// Loads the vehicules
+    pub async fn load_vehicules(&self) -> Result<VehiculeResponse, APIError> {
+        self.execute_request(APIClient::get_vehicules_request())
+            .await
     }
 }
