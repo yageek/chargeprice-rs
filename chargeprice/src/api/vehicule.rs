@@ -3,6 +3,7 @@ use serde::Deserialize;
 use super::{
     common::{EntityRef, InnerData, Response},
     plug::Plug,
+    Entity,
 };
 
 /// The attributes of the vehicules (cf: https://github.com/chargeprice/chargeprice-api-docs/blob/master/api/v1/vehicles/index.md)
@@ -35,4 +36,4 @@ impl VehiculeRelationships {
 }
 
 /// The payload object returns when asking for vehicules (cf: https://github.com/chargeprice/chargeprice-api-docs/blob/master/api/v1/vehicles/index.md)
-pub type VehiculeResponse = Response<VehiculeAttributes, VehiculeRelationships>;
+pub type VehiculeResponse = Response<Vec<Entity<VehiculeAttributes, VehiculeRelationships>>>;

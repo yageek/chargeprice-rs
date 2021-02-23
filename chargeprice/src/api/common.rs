@@ -4,13 +4,23 @@ use serde::Deserialize;
 
 /// The envelope for the response
 #[derive(Debug, Deserialize)]
-pub struct Response<T, R> {
-    data: Vec<Entity<T, R>>,
+pub struct Response<D, I = (), M = ()> {
+    data: D,
+    included: Option<I>,
+    meta: Option<M>,
 }
 
-impl<T, R> Response<T, R> {
-    pub fn data(&self) -> &[Entity<T, R>] {
+impl<D, I, M> Response<D, I, M> {
+    pub fn data(&self) -> &D {
         &self.data
+    }
+
+    pub fn meta(&self) -> Option<&M> {
+        self.meta.as_ref()
+    }
+
+    pub fn included(&self) -> Option<&I> {
+        self.included.as_ref()
     }
 }
 
@@ -30,7 +40,7 @@ impl<T> Deref for InnerData<T> {
 
 /// A entity referernce generally used within relat
 #[derive(Debug, Deserialize)]
-pub(super) struct EntityRef {
+pub struct EntityRef {
     pub id: String,
     #[serde(rename(deserialize = "type"))]
     pub kind: String,

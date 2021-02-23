@@ -1,8 +1,11 @@
+use std::collections::HashMap;
+
 use serde::Deserialize;
 
 use super::{
     common::{EntityRef, InnerData, Response},
     plug::Plug,
+    Entity,
 };
 
 #[derive(Debug, Deserialize)]
@@ -99,5 +102,20 @@ impl ChargingStationRelationShips {
     }
 }
 
-pub type ChargingStationResponse =
-    Response<ChargingStationAttributes, ChargingStationRelationShips>;
+#[derive(Debug, Deserialize)]
+pub struct ChargingStationMeta {
+    disabled_going_electric_countries: Vec<String>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct ChargingStationIncludeItem {
+    #[serde(flatten)]
+    reference: EntityRef,
+    attributes: HashMap<String, String>,
+}
+
+pub type ChargingStationResponse = Response<
+    Vec<Entity<ChargingStationAttributes, ChargingStationRelationShips>>,
+    Vec<ChargingStationIncludeItem>,
+    ChargingStationMeta,
+>;
