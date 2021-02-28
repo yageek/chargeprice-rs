@@ -4,13 +4,13 @@ use serde::Deserialize;
 
 /// The envelope for the response
 #[derive(Debug, Deserialize)]
-pub struct Response<D, I = (), M = ()> {
+pub struct DocumentData<D, I = (), M = ()> {
     data: D,
     included: Option<I>,
     meta: Option<M>,
 }
 
-impl<D, I, M> Response<D, I, M> {
+impl<D, I, M> DocumentData<D, I, M> {
     pub fn data(&self) -> &D {
         &self.data
     }

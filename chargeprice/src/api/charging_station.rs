@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use serde::Deserialize;
 
 use super::{
-    common::{EntityRef, InnerData, Response},
+    jsonapi::{DocumentData, EntityRef, InnerData},
     plug::Plug,
     Entity,
 };
@@ -114,7 +114,7 @@ pub struct ChargingStationIncludeItem {
     attributes: HashMap<String, String>,
 }
 
-pub type ChargingStationResponse = Response<
+pub type ChargingStationResponse = DocumentData<
     Vec<Entity<ChargingStationAttributes, ChargingStationRelationShips>>,
     Vec<ChargingStationIncludeItem>,
     ChargingStationMeta,
