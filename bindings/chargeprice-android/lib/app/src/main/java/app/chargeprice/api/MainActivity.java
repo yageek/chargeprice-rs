@@ -19,7 +19,7 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         try {
-            mClient = new Client("***REMOVED***");
+            mClient = new Client("API_KEY");
 
             mClient.loadVehicule(new ClientListener() {
                 @Override

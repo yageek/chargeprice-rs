@@ -16,7 +16,7 @@
 @implementation CPApiKitTests
 
 - (void)testExample {
-    client = [[CPClient alloc] initWithKey:@"***REMOVED***"];
+    client = [[CPClient alloc] initWithKey:@"API_KEY"];
     XCTAssertNotNil(client);
 
     XCTestExpectation *exp = [self expectationWithDescription:@"Basic call"];
